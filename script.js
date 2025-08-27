@@ -56,6 +56,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const successMessage = document.getElementById('success-message');
     const formFields = ['nombre', 'email', 'telefono', 'tipo-envio', 'mensaje'];
 
+    // Solo ejecutar validación si el formulario existe
+    if (!contactForm) {
+        console.log('Formulario de contacto no encontrado - funcionalidad deshabilitada');
+    }
+
     // Función para mostrar errores
     function showError(fieldId, message) {
         const errorElement = document.getElementById(fieldId + '-error');
@@ -105,7 +110,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validación individual de campos
     function validateField(fieldId) {
         const field = document.getElementById(fieldId);
-        if (!field) return false;
+        if (!field) {
+            console.warn(`Campo ${fieldId} no encontrado`);
+            return false;
+        }
 
         const value = field.value.trim();
 
@@ -165,21 +173,23 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
 
-    // Validación en tiempo real
-    formFields.forEach(function(fieldId) {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            // Validar al perder el foco
-            field.addEventListener('blur', function() {
-                validateField(fieldId);
-            });
+    // Validación en tiempo real - solo si el formulario existe
+    if (contactForm) {
+        formFields.forEach(function(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                // Validar al perder el foco
+                field.addEventListener('blur', function() {
+                    validateField(fieldId);
+                });
 
-            // Limpiar errores al escribir
-            field.addEventListener('input', function() {
-                clearError(fieldId);
-            });
-        }
-    });
+                // Limpiar errores al escribir
+                field.addEventListener('input', function() {
+                    clearError(fieldId);
+                });
+            }
+        });
+    }
 
     // Envío del formulario
     if (contactForm) {
@@ -275,13 +285,23 @@ document.addEventListener('DOMContentLoaded', function() {
         lastScrollTop = scrollTop;
     });
 
-    // Efecto parallax suave en el hero
+    // Efecto parallax suave en el hero - optimizado
     const hero = document.querySelector('.hero');
     if (hero) {
-        window.addEventListener('scroll', function() {
+        let ticking = false;
+        
+        function updateParallax() {
             const scrolled = window.pageYOffset;
             const rate = scrolled * -0.3;
             hero.style.transform = `translateY(${rate}px)`;
+            ticking = false;
+        }
+        
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(updateParallax);
+                ticking = true;
+            }
         });
     }
 
@@ -289,30 +309,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // ANIMACIONES AL HACER SCROLL
     // ===================================
 
-    // Configuración del Intersection Observer
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
+    // Configuración del Intersection Observer con fallback
+    if ('IntersectionObserver' in window) {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
 
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('fade-in-up');
-                // Dejar de observar el elemento una vez animado
-                observer.unobserve(entry.target);
-            }
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                    // Dejar de observar el elemento una vez animado
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observar elementos para animaciones - solo los que existen
+        const elementsToAnimate = document.querySelectorAll(
+            '.service-card, .mission, .vision'
+        );
+
+        elementsToAnimate.forEach(function(el) {
+            observer.observe(el);
         });
-    }, observerOptions);
 
-    // Observar elementos para animaciones
-    const elementsToAnimate = document.querySelectorAll(
-        '.service-card, .mission, .vision, .contact-form'
-    );
-
-    elementsToAnimate.forEach(function(el) {
-        observer.observe(el);
-    });
+        // Agregar formulario de contacto solo si existe
+        const contactFormElement = document.querySelector('.contact-form');
+        if (contactFormElement) {
+            observer.observe(contactFormElement);
+        }
+    } else {
+        // Fallback para navegadores sin soporte
+        console.log('IntersectionObserver no soportado - animaciones deshabilitadas');
+        const elementsToAnimate = document.querySelectorAll(
+            '.service-card, .mission, .vision, .contact-form'
+        );
+        elementsToAnimate.forEach(function(el) {
+            el.classList.add('fade-in-up');
+        });
+    }
 
     // ===================================
     // SMOOTH SCROLL PARA NAVEGACIÓN
